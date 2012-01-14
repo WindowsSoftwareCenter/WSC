@@ -67,7 +67,7 @@ namespace WSC {
                 case Engine.PackageStatus.NEWER: // TO UPGRADE
                 case Engine.PackageStatus.NOT_INSTALLED: // TO INSTALL
                     try {
-                        new Loading(selectedPackage.Path, name).Show();
+                        new Loading(selectedPackage.Path, "tmp\\"+name, true).Show();
                     }
                     catch(Exception) {
                         MessageBox.Show("An error has occurred during the launching of the installing wizard.");

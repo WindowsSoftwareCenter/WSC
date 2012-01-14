@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows.Forms;
 using WAPT;
+using System.Threading;
 
 namespace WSC {
     public partial class Program : Form {
@@ -40,7 +41,7 @@ namespace WSC {
         /* On package click */
         private void listbox1_MouseDoubleClick(object sender, EventArgs e) {
             if(listBox1.SelectedItem != null)
-              new PackageForm(engine, listBox1.SelectedItem.ToString()).Show();
+                new PackageForm(engine, listBox1.SelectedItem.ToString()).Show();
         }
         private void listBox1_SelectedIndexChanged(object sender, EventArgs e) { }
 
@@ -69,6 +70,15 @@ namespace WSC {
 
         /* Clear cache */
         private void toolStripButton4_Click(object sender, EventArgs e) {
+            if(MessageBox.Show("Must I delete tmp\\ directory with installers too?", "Confirm delete", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                if(Directory.Exists("tmp\\"))
+                    try {
+                        Directory.Delete("tmp\\", true);
+                        MessageBox.Show("tmp\\ directory deleted.");
+                    }
+                    catch(Exception) {
+                        MessageBox.Show("An error has occurred during the tmp\\ directory deleting.");
+                    }
             if(engine.Clear())
                 MessageBox.Show("Cache cleaned.");
             else
@@ -105,27 +115,47 @@ namespace WSC {
 
         private void Init() {
             try {
-                engine = new Engine();
+                if(!Directory.Exists("tmp\\"))
+                    Directory.CreateDirectory("tmp\\");
+                //new Loading("http://www.giovannicapuano.net/repository/package.xml", "package.xml").Show();
+                if(!Utils.Download("http://www.giovannicapuano.net/repository/package.xml", "package.xml")) {
+                    MessageBox.Show("Repository malformed or does not exists.");
+                    Environment.Exit(1);
+                }
+                engine = new Engine("package.xml");
                 reset();
                 textBox3.Text = engine.Packages.Count + " packages";
             }
             catch(FileNotFoundException) {
-                MessageBox.Show("Repository manifest not found.");
+                MessageBox.Show("Repository malformed or does not exists.");
+                Environment.Exit(1);
+            }
+            catch(IOException) {
+                MessageBox.Show("Error creating tmp\\ directory.");
                 Environment.Exit(1);
             }
         }
 
         private void Init(string url) {
             try {
-                engine = new Engine(url);
+                if(!Directory.Exists("tmp\\"))
+                    Directory.CreateDirectory("tmp\\");
+                new Loading(url, "package.xml").Show();
+                engine = new Engine("package.xml");
                 reset();
                 textBox3.Text = engine.Packages.Count + " packages";
             }
             catch(FileNotFoundException) {
                 MessageBox.Show("Repository malformed or does not exists.");
+                Environment.Exit(1);
             }
             catch(ArgumentException) {
                 MessageBox.Show("Repository malformed or does not exists.");
+                Environment.Exit(1);
+            }
+            catch(IOException) {
+                MessageBox.Show("Error creating tmp\\ directory.");
+                Environment.Exit(1);
             }
         }
 
@@ -135,7 +165,7 @@ namespace WSC {
         }
 
         private void AddFilter(string[] filters, ComboBox combobox) {
-            for(int i=0, count=filters.Length; i<count; ++i)
+            for(int i = 0, count = filters.Length; i < count; ++i)
                 combobox.Items.Add(filters[i]);
         }
 

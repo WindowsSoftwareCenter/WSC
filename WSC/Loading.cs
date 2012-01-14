@@ -15,11 +15,29 @@ namespace WSC {
         private HttpWebResponse webResponse;
         private static int PercentProgress;
         private delegate void UpdateProgessCallback(Int64 BytesRead, Int64 TotalBytes);
+        private bool run;
 
         public Loading(string url, string name) {
             InitializeComponent();
             this.url = url;
             this.name = name;
+            run = false;
+            Control.CheckForIllegalCrossThreadCalls = false; // A day I make all thread-safe, promise, ok? :3
+            try {
+                thread = new Thread(Download);
+                thread.Start();
+                Download();
+            }
+            catch(Exception) {
+                throw new FileNotFoundException();
+            }
+        }
+
+        public Loading(string url, string name, bool run) {
+            InitializeComponent();
+            this.url = url;
+            this.name = name;
+            this.run = run;
             Control.CheckForIllegalCrossThreadCalls = false; // A day I make all thread-safe, promise, ok? :3
             try {
                 thread = new Thread(Download);
@@ -54,17 +72,25 @@ namespace WSC {
                             this.Invoke(new UpdateProgessCallback(UpdateProgress), new object[] { strLocal.Length, fileSize });
                         }
                     }
-                    catch(Exception) {
+                    catch(Exception e) {
                         throw new FileNotFoundException();
                     }
                     finally {
-                        strResponse.Close();
-                        strLocal.Close();
+                        if(strResponse != null)
+                            strResponse.Close();
+                        if(strLocal != null)
+                            strLocal.Close();
                     }
                 }
-            if(File.Exists(name))
-                Process.Start(name);
-            Dispose();
+            if(run && File.Exists(name))
+                try {
+                    Process.Start(name);
+                }
+                catch(Exception) {
+                    MessageBox.Show(name);
+                    throw new FileNotFoundException();
+                }
+            Hide();
         }
 
         private void UpdateProgress(Int64 BytesRead, Int64 TotalBytes) {
